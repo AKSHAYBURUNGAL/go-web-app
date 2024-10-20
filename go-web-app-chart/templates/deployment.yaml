@@ -17,6 +17,6 @@ spec:
     spec:
       containers:
       - name: go-web-app
-        image: admin335/go-web-app:v1
+        image: admin335/go-web-app:{{ .Values.image.tag }}
         ports:
         - containerPort: 8080
