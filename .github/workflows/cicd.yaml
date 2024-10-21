@@ -18,10 +18,18 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Set up Go 1.21
+    - name: Set up Go 1.23.2
       uses: actions/setup-go@v2
       with:
-        go-version: 1.21
+        go-version: 1.23.2
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
 
     - name: Build
       run: go build -o go-web-app
@@ -40,9 +48,11 @@ jobs:
       uses: golangci/golangci-lint-action@v6
       with:
         version: v1.56.2
-
+      continue-on-error: false
+  
   push:
     runs-on: ubuntu-latest
+
     needs: build
 
     steps:
@@ -58,16 +68,19 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Build and Push Docker Image
+    - name: Build and Push action
       uses: docker/build-push-action@v6
       with:
         context: .
         file: ./Dockerfile
         push: true
-        tags: ${{ secrets.DOCKERHUB_USERNAME }}/go-web-app:${{github.run_id}}
+        tags: |
+          ${{ secrets.DOCKERHUB_USERNAME }}/go-web-app:${{github.run_id}}
+          ${{ secrets.DOCKERHUB_USERNAME }}/go-web-app:latest
 
   update-newtag-in-helm-chart:
     runs-on: ubuntu-latest
+
     needs: push
 
     steps:
@@ -82,8 +95,8 @@ jobs:
 
     - name: Commit and push changes
       run: |
-        git config --global user.email "burungaleakshay123@gmail.com"
-        git config --global user.name "AKSHAYBURUNGAL"
+        git config --global user.email "burungaleakshay@gmail.com"
+        git config --global user.name "Akshay Burungale"
         git add helm/go-web-app-chart/values.yaml
         git commit -m "Update tag in Helm chart"
         git push
